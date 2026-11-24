@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Ground Control Factions: up to ten factions in one Nuclear Option match. A plugin of its own, so it runs
+       on the base game with the stock AI; Ground Control RTS picks it up when both are installed
+       (Core/CommanderFactionsBridge.cs there). Build: dotnet build -c Release -p:GameDir=... -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>GroundControlFactions</AssemblyName>
+    <RootNamespace>GroundControlFactions</RootNamespace>
+    <Version>1.0.0.4</Version>
+    <EnableSourceLink>false</EnableSourceLink>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GameDir Condition="'$(GameDir)' == ''">$(NUCLEAR_OPTION_DIR)</GameDir>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</GameDir>
+    <Managed>$(GameDir)\NuclearOption_Data\Managed</Managed>
+    <PluginInstallDir>$(GameDir)\BepInEx\plugins\GroundControlFactions</PluginInstallDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="stylecop.json" />
+    <!-- Join card pictures for factions 3-10, 512x250, named after the faction. -->
+    <EmbeddedResource Include="Banners\*.jpg" LogicalName="Banners.%(Filename).jpg" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.19.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Builds straight into the game; fails while the game runs (Windows locks a loaded DLL). -->
+  <Target Name="InstallIntoGame" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' And Exists('$(GameDir)\BepInEx\plugins')">
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="$(PluginInstallDir)" />
+    <Message Importance="high" Text="Installed into $(PluginInstallDir)" />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="BepInEx" HintPath="$(GameDir)\BepInEx\core\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(GameDir)\BepInEx\core\0Harmony.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(Managed)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Mirage" HintPath="$(Managed)\Mirage.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(Managed)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(Managed)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(Managed)\UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="UnityEngine.AudioModule" HintPath="$(Managed)\UnityEngine.AudioModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(Managed)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(Managed)\UnityEngine.ImageConversionModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(Managed)\UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(Managed)\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="Unity.TextMeshPro" HintPath="$(Managed)\Unity.TextMeshPro.dll" Private="false" />
+  </ItemGroup>
+</Project>
