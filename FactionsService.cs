@@ -32,9 +32,12 @@ internal static class FactionsService
 
     internal const string TagPrefix = "GC Factions ";
 
-    /// <summary>Seconds after load before the base deal: carriers are mission units and spawn after
-    /// the airbases.</summary>
+    /// <summary>Latest the base deal waits after load: carriers are mission units and spawn after
+    /// the airbases, so it goes as soon as <see cref="AllBasesIn"/>, or at this if one never does.</summary>
     private const float DealDelaySeconds = 8f;
+
+    /// <summary>Earliest the base deal goes, so the mission's first frame has settled.</summary>
+    private const float MinDealDelaySeconds = 1f;
 
     /// <summary>How long the deal waits on <see cref="FactionsApi.HoldDeal"/> before going ahead.</summary>
     private const float HoldWaitSeconds = 60f;
@@ -107,7 +110,8 @@ internal static class FactionsService
             return;
         }
 
-        if (!dealt && Time.timeSinceLevelLoad > DealDelaySeconds)
+        if (!dealt && Time.timeSinceLevelLoad > MinDealDelaySeconds
+            && (Time.timeSinceLevelLoad > DealDelaySeconds || AllBasesIn()))
         {
             TryDeal();
         }
@@ -335,6 +339,41 @@ internal static class FactionsService
         }
 
         return count;
+    }
+
+    /// <summary>Every base <see cref="CountBases(Mission)"/> expects is registered: carriers and
+    /// custom airbases included, so the deal does not hand a land base to a faction with a deck.</summary>
+    internal static bool AllBasesIn()
+    {
+        Mission? mission = MissionManager.CurrentMission;
+        if (mission == null)
+        {
+            return false;
+        }
+
+        int registered = 0;
+        foreach (Airbase airbase in FactionRegistry.airbaseLookup.Values)
+        {
+            if (airbase == null)
+            {
+                continue;
+            }
+
+            if (airbase.AttachedAirbase)
+            {
+                registered++;
+                continue;
+            }
+
+            SavedAirbase? saved = airbase.SavedAirbase;
+            if (saved != null)
+            {
+                SavedAirbase? overridden = mission.airbases.Find(a => a.UniqueName == saved.UniqueName);
+                registered += (overridden ?? saved).Disabled ? 0 : 1;
+            }
+        }
+
+        return registered >= CountBases(mission);
     }
 
     /// <summary>Run at plugin load: the catalogue has room for the slider's maximum, names are
@@ -580,6 +619,7 @@ internal static class FactionsService
 
         dealt = true;
         dealtAt = Time.time;
+        FactionsPlugin.Log.LogInfo($"Base deal at {Time.timeSinceLevelLoad:0.0} s after load (all bases in: {AllBasesIn()}).");
         List<FactionHQ> hqs = new(FactionRegistry.GetSortedHQs());
         foreach (FactionHQ hq in hqs)
         {
