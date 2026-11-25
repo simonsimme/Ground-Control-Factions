@@ -230,15 +230,31 @@ internal sealed class FactionsLeaderboard : MonoBehaviour
 
     private void FitToScreen()
     {
-        RectTransform? self = transform as RectTransform;
-        if (menuRoot == null || self == null)
+        // The menu's own rect does not grow with the rows (only the rows fit their content), so the
+        // rows are measured, in screen canvas units, against the root canvas.
+        Canvas? canvas = GetComponentInParent<Canvas>();
+        if (menuRoot == null || canvas == null || rows.Count < 2)
         {
             return;
         }
 
-        Vector2 room = self.rect.size - new Vector2(ScreenMargin, ScreenMargin);
-        Vector2 size = menuRoot.rect.size;
-        float scale = Mathf.Min(1f, room.x / Mathf.Max(1f, size.x), room.y / Mathf.Max(1f, size.y));
+        Transform root = canvas.rootCanvas.transform;
+        Vector2 room = ((RectTransform)root).rect.size - new Vector2(ScreenMargin, ScreenMargin);
+        float width = 0f;
+        float height = 0f;
+        foreach (Transform row in rows)
+        {
+            if (row.gameObject.activeSelf)
+            {
+                Rect rect = ((RectTransform)row).rect;
+                width = Mathf.Max(width, rect.width * row.lossyScale.x / root.lossyScale.x);
+                height += rect.height * row.lossyScale.y / root.lossyScale.y;
+            }
+        }
+
+        // Measured at the current scale, so divided back out to the unscaled size.
+        float current = Mathf.Max(0.01f, menuRoot.localScale.x);
+        float scale = Mathf.Min(1f, room.x * current / Mathf.Max(1f, width), room.y * current / Mathf.Max(1f, height));
         if (Mathf.Abs(menuRoot.localScale.x - scale) > 0.01f)
         {
             menuRoot.localScale = new Vector3(scale, scale, 1f);

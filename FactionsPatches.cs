@@ -61,6 +61,11 @@ internal static class FactionsPatches
     [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Harmony calls it.")]
     private static void StartMissionPostfix()
     {
+        if (FactionsService.RandomBases(MissionManager.CurrentMission) && NetworkManagerNuclearOption.i != null && NetworkManagerNuclearOption.i.Server.Active)
+        {
+            FactionsRandomBases.CheckNewUnits();
+        }
+
         FactionsObjectives.GiveCaptureObjectives();
     }
 

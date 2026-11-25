@@ -216,6 +216,24 @@ internal static class FactionsSettingsPatches
                 }
             },
             FactionsAiSupplies.Label);
+        AddPageSlider(
+            refreshers,
+            box,
+            sliderTemplate,
+            "Random Bases",
+            "On: at the start every land base goes neutral, whoever the mission gave it to, and each faction is handed a random one, so no two matches start alike.",
+            0,
+            1,
+            () => FactionsService.RandomBases(Edited()) ? 1 : 0,
+            value =>
+            {
+                Mission? mission = Edited();
+                if (mission != null)
+                {
+                    FactionsUnitCapPatches.WriteTag(mission, FactionsService.RandomBasesTagPrefix, value);
+                }
+            },
+            value => value == 0 ? "Off (mission)" : "On: all neutral, random starts");
 
         // A copy of Close, right of it; right of GC RTS's own button (200 wide, 120 out) when GC is in.
         GameObject copy = Object.Instantiate(___closeButton.gameObject, ___closeButton.transform.parent);

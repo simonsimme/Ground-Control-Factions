@@ -32,6 +32,9 @@ internal static class FactionsService
 
     internal const string TagPrefix = "GC Factions ";
 
+    /// <summary>"GC Random Bases 1": see <see cref="FactionsRandomBases"/>.</summary>
+    internal const string RandomBasesTagPrefix = "GC Random Bases ";
+
     /// <summary>Latest the base deal waits after load: carriers are mission units and spawn after
     /// the airbases, so it goes as soon as <see cref="AllBasesIn"/>, or at this if one never does.</summary>
     private const float DealDelaySeconds = 8f;
@@ -61,14 +64,16 @@ internal static class FactionsService
 
     private static readonly Spec[] Extras =
     {
-        new("Veydra", "Veydra Union", "VEY", new Color(0.25f, 0.75f, 0.3f)),
-        new("Kharrow", "Kharrow Republic", "KHR", new Color(0.95f, 0.55f, 0.15f)),
-        new("Solmara", "Solmara Coalition", "SOL", new Color(0.95f, 0.85f, 0.2f)),
-        new("Drakmor", "Drakmor Dominion", "DRK", new Color(0.6f, 0.3f, 0.85f)),
-        new("Nordhal", "Nordhal Federation", "NRD", new Color(0.2f, 0.8f, 0.9f)),
-        new("Rosmere", "Rosmere Accord", "RSM", new Color(0.95f, 0.4f, 0.7f)),
-        new("Ironvale", "Ironvale Compact", "IRV", new Color(0.85f, 0.85f, 0.85f)),
-        new("Cindral", "Cindral Directorate", "CND", new Color(0.6f, 0.4f, 0.25f)),
+        // Hues spread round the wheel away from the stock ones (read from resources.assets):
+        // Boscali lavender (0.66, 0.42, 1) and Primeva amber (1, 0.72, 0).
+        new("Cindral", "Cindral Directorate", "CND", new Color(1f, 0.6f, 0.75f)),
+        new("Kharrow", "Kharrow Republic", "KHR", new Color(1f, 0.1f, 0.1f)),
+        new("Solmara", "Solmara Coalition", "SOL", new Color(0.6f, 1f, 0f)),
+        new("Drakmor", "Drakmor Dominion", "DRK", new Color(0.1f, 0.35f, 1f)),
+        new("Nordhal", "Nordhal Federation", "NRD", new Color(0f, 1f, 0.9f)),
+        new("Ironvale", "Ironvale Compact", "IRV", new Color(1f, 1f, 1f)),
+        new("Rosmere", "Rosmere Accord", "RSM", new Color(1f, 0f, 0.85f)),
+        new("Veydra", "Veydra Union", "VEY", new Color(0f, 0.8f, 0.2f)),
     };
 
     private static readonly Faction?[] Factions = new Faction?[Extras.Length];
@@ -105,9 +110,14 @@ internal static class FactionsService
             return;
         }
 
-        if (activeExtras == 0 || !MissionManager.IsRunning || NetworkManagerNuclearOption.i == null || !NetworkManagerNuclearOption.i.Server.Active)
+        if ((activeExtras == 0 && !RandomBases(MissionManager.CurrentMission)) || !MissionManager.IsRunning || NetworkManagerNuclearOption.i == null || !NetworkManagerNuclearOption.i.Server.Active)
         {
             return;
+        }
+
+        if (RandomBases(MissionManager.CurrentMission))
+        {
+            FactionsRandomBases.CheckNewUnits();
         }
 
         if (!dealt && Time.timeSinceLevelLoad > MinDealDelaySeconds
@@ -116,7 +126,7 @@ internal static class FactionsService
             TryDeal();
         }
 
-        if (dealt && !FactionsApi.ExternalVictory && Time.time >= nextRuleAt && Time.time - dealtAt > RuleGraceSeconds)
+        if (dealt && activeExtras > 0 && !FactionsApi.ExternalVictory && Time.time >= nextRuleAt && Time.time - dealtAt > RuleGraceSeconds)
         {
             nextRuleAt = Time.time + RuleIntervalSeconds;
             ApplyNoBaseRule();
@@ -188,6 +198,11 @@ internal static class FactionsService
             // Fields, not the constructor: a game patch once added parameters to it.
             tags.Add(new MissionTag { Tag = TagPrefix + count.ToString(CultureInfo.InvariantCulture), Color = new Color(0.3f, 0.85f, 0.8f), SortOrder = 9 });
         }
+    }
+
+    internal static bool RandomBases(Mission? mission)
+    {
+        return FactionsUnitCapPatches.ReadTag(mission, RandomBasesTagPrefix, 1) == 1;
     }
 
     /// <summary>Gives the mission a faction entry for each extra its count asks for and drops the
@@ -289,6 +304,14 @@ internal static class FactionsService
 
         int asked = RequestedCount(mission);
         int bases = CountBases(mission);
+        if (RandomBases(mission))
+        {
+            // Random Bases starts every faction at an airstrip of the map: no more factions than
+            // those (10 asked on Insane Gambler's 8 dealt a heliport and a farm).
+            int airstrips = FactionsRandomBases.CountAirstrips(mission);
+            bases = airstrips > 0 ? Mathf.Min(bases, airstrips) : bases;
+        }
+
         int want = Mathf.Min(asked, Mathf.Max(MinFactions, bases));
         SpawnExtras(mission, want - MinFactions);
         for (int i = activeExtras; i < Extras.Length; i++)
@@ -300,6 +323,11 @@ internal static class FactionsService
         if (asked > MinFactions)
         {
             FactionsPlugin.Log.LogInfo($"{MinFactions + activeExtras} factions this match ({asked} asked for, {bases} bases).");
+        }
+
+        if (RandomBases(mission))
+        {
+            FactionsRandomBases.Apply(mission);
         }
     }
 
@@ -329,16 +357,19 @@ internal static class FactionsService
 
         foreach (SavedShip ship in mission.ships)
         {
-            if (Encyclopedia.i != null
-                && Encyclopedia.Lookup.TryGetValue(ship.type, out UnitDefinition definition)
-                && definition.unitPrefab != null
-                && definition.unitPrefab.GetComponentInChildren<Airbase>(true) != null)
-            {
-                count++;
-            }
+            count += IsCarrier(ship) ? 1 : 0;
         }
 
         return count;
+    }
+
+    /// <summary>A ship of the mission that carries a deck, and so is a base.</summary>
+    internal static bool IsCarrier(SavedShip ship)
+    {
+        return Encyclopedia.i != null
+            && Encyclopedia.Lookup.TryGetValue(ship.type, out UnitDefinition definition)
+            && definition.unitPrefab != null
+            && definition.unitPrefab.GetComponentInChildren<Airbase>(true) != null;
     }
 
     /// <summary>Every base <see cref="CountBases(Mission)"/> expects is registered: carriers and
@@ -662,6 +693,20 @@ internal static class FactionsService
                     kit(hq, airbase);
                     break;
                 }
+            }
+        }
+
+        foreach (FactionHQ hq in hqs)
+        {
+            if (hq != null && hq.faction != null)
+            {
+                List<string> held = new();
+                foreach (Airbase airbase in hq.GetAirbases())
+                {
+                    held.Add(airbase != null ? Label(airbase) : "?");
+                }
+
+                FactionsPlugin.Log.LogInfo($"{hq.faction.factionName} holds at the deal: {(held.Count == 0 ? "nothing" : string.Join(", ", held))}.");
             }
         }
     }

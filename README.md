@@ -34,7 +34,7 @@ joins Boscali and Primeva, and is told so in chat.
 
 ## How it plays
 
-- The added factions are Veydra, Kharrow, Solmara, Drakmor, Nordhal, Rosmere, Ironvale and Cindral,
+- The added factions are Cindral, Kharrow, Solmara, Drakmor, Nordhal, Ironvale, Rosmere and Veydra,
   each with its own colour and emblem. Each has its own funds, income, warheads, supplies and
   restrictions, copied from the mission's first faction, and each can be joined.
 - The faction select screen and the TAB scoreboard show every faction.
