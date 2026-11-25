@@ -10,7 +10,7 @@ namespace GroundControlFactions;
 /// Ground Control Factions: up to ten factions in one match. Works on the base game on its own; Ground Control
 /// RTS hooks in through <see cref="FactionsApi"/> when it is installed too.
 /// </summary>
-[BepInPlugin(PluginId, "Ground Control Factions", "1.0.0.4")]
+[BepInPlugin(PluginId, "Ground Control Factions", "1.0.0.5")]
 [SuppressMessage("Usage", "CA2243:Attribute string literals should parse correctly", Justification = "A BepInEx plugin GUID is a reverse-DNS name, not a System.Guid.")]
 [SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Unity owns a plugin's lifetime; OnDestroy unpatches Harmony.")]
 public sealed class FactionsPlugin : BaseUnityPlugin

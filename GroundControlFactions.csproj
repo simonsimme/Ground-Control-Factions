@@ -9,7 +9,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>GroundControlFactions</AssemblyName>
     <RootNamespace>GroundControlFactions</RootNamespace>
-    <Version>1.0.0.4</Version>
+    <Version>1.0.0.5</Version>
     <EnableSourceLink>false</EnableSourceLink>
     <AnalysisLevel>latest-all</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>

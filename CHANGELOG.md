@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0.5
+
+### Added
+
+- Random Bases (GC Factions Settings page): the map's airbases are dealt out to the factions at random, each base's neighbours and units going with it.
+
+### Fixed
+
+- The base deal waits until every base, carriers included, is in before dealing.
+
 ## 1.0.0.4
 
 ### Added
